@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Machine Efficiency Predictor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 Machine Efficiency Prediction</h1>
+            <p class="subtitle">MLOps Production Inference Service</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Formulaire de prédiction -->
+            <div class="form-section">
+                <h2>Enter Machine Data</h2>
+                <form id="predictionForm">
+                    <div class="form-grid">
+                        <!-- Operation Mode -->
+                        <div class="form-group">
+                            <label for="operation_mode">Operation Mode</label>
+                            <select id="operation_mode" name="Operation_Mode" required>
+                                <option value="">Select mode...</option>
+                                <option value="Active">Active</option>
+                                <option value="Idle">Idle</option>
+                                <option value="Maintenance">Maintenance</option>
+                            </select>
+                        </div>
+
+                        <!-- Temperature -->
+                        <div class="form-group">
+                            <label for="temperature">Temperature (°C)</label>
+                            <input type="number" id="temperature" name="Temperature_C" 
+                                   step="0.1" min="0" max="150" placeholder="75.5" required>
+                        </div>
+
+                        <!-- Vibration -->
+                        <div class="form-group">
+                            <label for="vibration">Vibration (Hz)</label>
+                            <input type="number" id="vibration" name="Vibration_Hz" 
+                                   step="0.1" min="0" max="100" placeholder="45.2" required>
+                        </div>
+
+                        <!-- Power Consumption -->
+                        <div class="form-group">
+                            <label for="power">Power Consumption (kW)</label>
+                            <input type="number" id="power" name="Power_Consumption_kW" 
+                                   step="0.1" min="0" max="500" placeholder="120.3" required>
+                        </div>
+
+                        <!-- Network Latency -->
+                        <div class="form-group">
+                            <label for="latency">Network Latency (ms)</label>
+                            <input type="number" id="latency" name="Network_Latency_ms" 
+                                   step="0.1" min="0" max="1000" placeholder="15.2" required>
+                        </div>
+
+                        <!-- Packet Loss -->
+                        <div class="form-group">
+                            <label for="packet_loss">Packet Loss (%)</label>
+                            <input type="number" id="packet_loss" name="Packet_Loss_%" 
+                                   step="0.1" min="0" max="100" placeholder="0.5" required>
+                        </div>
+
+                        <!-- Quality Control Defect Rate -->
+                        <div class="form-group">
+                            <label for="defect_rate">Defect Rate (%)</label>
+                            <input type="number" id="defect_rate" name="Quality_Control_Defect_Rate_%" 
+                                   step="0.1" min="0" max="100" placeholder="2.1" required>
+                        </div>
+
+                        <!-- Production Speed -->
+                        <div class="form-group">
+                            <label for="production_speed">Production Speed (units/hr)</label>
+                            <input type="number" id="production_speed" name="Production_Speed_units_per_hr" 
+                                   step="1" min="0" max="2000" placeholder="850" required>
+                        </div>
+
+                        <!-- Predictive Maintenance Score -->
+                        <div class="form-group">
+                            <label for="maintenance_score">Maintenance Score</label>
+                            <input type="number" id="maintenance_score" name="Predictive_Maintenance_Score" 
+                                   step="0.1" min="0" max="10" placeholder="7.5" required>
+                        </div>
+
+                        <!-- Error Rate -->
+                        <div class="form-group">
+                            <label for="error_rate">Error Rate (%)</label>
+                            <input type="number" id="error_rate" name="Error_Rate_%" 
+                                   step="0.1" min="0" max="100" placeholder="1.2" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-predict">
+                        <span class="btn-text">Predict Efficiency</span>
+                        <span class="btn-loader" style="display: none;">⏳ Processing...</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Résultats de prédiction -->
+            <div class="result-section" id="resultSection" style="display: none;">
+                <h2>Prediction Results</h2>
+                
+                <div class="result-card">
+                    <div class="result-main">
+                        <div class="efficiency-badge" id="efficiencyBadge">
+                            <span class="badge-label">Efficiency Status</span>
+                            <span class="badge-value" id="efficiencyValue">-</span>
+                        </div>
+                        <div class="confidence-score">
+                            <span class="confidence-label">Confidence</span>
+                            <span class="confidence-value" id="confidenceValue">-</span>
+                        </div>
+                    </div>
+
+                    <div class="probabilities" id="probabilitiesSection">
+                        <h3>Class Probabilities</h3>
+                        <div class="probability-bars" id="probabilityBars">
+                            <!-- Dynamically populated -->
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn-reset" onclick="resetForm()">
+                    🔄 New Prediction
+                </button>
+            </div>
+        </div>
+
+        <footer>
+            <p>MLOps Project | Powered by Flask & scikit-learn</p>
+        </footer>
+    </div>
+
+    <script>
+        const form = document.getElementById('predictionForm');
+        const resultSection = document.getElementById('resultSection');
+        const btnText = document.querySelector('.btn-text');
+        const btnLoader = document.querySelector('.btn-loader');
+
+        // Load metadata on page load
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch('/api/metadata');
+                const metadata = await response.json();
+                
+                // Populate Operation Mode dropdown
+                const select = document.getElementById('operation_mode');
+                select.innerHTML = '<option value="">Select mode...</option>';
+                
+                metadata.operation_modes.forEach(mode => {
+                    const option = document.createElement('option');
+                    option.value = mode;
+                    option.textContent = mode;
+                    select.appendChild(option);
+                });
+                
+                console.log('Metadata loaded:', metadata);
+            } catch (error) {
+                console.error('Error loading metadata:', error);
+            }
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Show loader
+            btnText.style.display = 'none';
+            btnLoader.style.display = 'inline';
+            
+            // Collect form data
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData);
+            
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayResults(result.prediction);
+                } else {
+                    alert('Prediction failed: ' + (result.message || result.error));
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                // Hide loader
+                btnText.style.display = 'inline';
+                btnLoader.style.display = 'none';
+            }
+        });
+
+        function displayResults(prediction) {
+            // Show result section
+            resultSection.style.display = 'block';
+            resultSection.scrollIntoView({ behavior: 'smooth' });
+            
+            // Set efficiency status
+            const efficiencyValue = document.getElementById('efficiencyValue');
+            const efficiencyBadge = document.getElementById('efficiencyBadge');
+            
+            efficiencyValue.textContent = prediction.efficiency_status;
+            
+            // Apply color based on status
+            efficiencyBadge.className = 'efficiency-badge';
+            if (prediction.efficiency_status === 'High') {
+                efficiencyBadge.classList.add('status-high');
+            } else if (prediction.efficiency_status === 'Medium') {
+                efficiencyBadge.classList.add('status-medium');
+            } else {
+                efficiencyBadge.classList.add('status-low');
+            }
+            
+            // Set confidence
+            const confidenceValue = document.getElementById('confidenceValue');
+            confidenceValue.textContent = (prediction.confidence * 100).toFixed(1) + '%';
+            
+            // Display probabilities
+            const probabilityBars = document.getElementById('probabilityBars');
+            probabilityBars.innerHTML = '';
+            
+            for (const [className, prob] of Object.entries(prediction.probabilities)) {
+                const barContainer = document.createElement('div');
+                barContainer.className = 'probability-item';
+                
+                const percentage = (prob * 100).toFixed(1);
+                
+                barContainer.innerHTML = `
+                    <div class="prob-label">${className}</div>
+                    <div class="prob-bar-container">
+                        <div class="prob-bar" style="width: ${percentage}%"></div>
+                    </div>
+                    <div class="prob-value">${percentage}%</div>
+                `;
+                
+                probabilityBars.appendChild(barContainer);
+            }
+        }
+
+        function resetForm() {
+            form.reset();
+            resultSection.style.display = 'none';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>

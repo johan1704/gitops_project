@@ -7,3 +7,6 @@ if __name__=="__main__":
 
     trainer = ModelTraining("artifacts/processed/" , "artifacts/models/")
     trainer.run()
+
+
+
